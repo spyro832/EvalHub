@@ -118,6 +118,18 @@ export interface TestSuiteCreate {
   cases?: { input: string; expected_output?: string; expected_tags?: string }[];
 }
 
+export interface TestRun {
+  id: string;
+  suite_id: string;
+  model_config_id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  pass_count: number;
+  fail_count: number;
+  avg_latency_ms: number | null;
+  total_cost_usd: number;
+  created_at: string;
+}
+
 // ── Models API ────────────────────────────────────────────────────────────
 
 export const modelsApi = {
@@ -134,6 +146,11 @@ export const evaluationsApi = {
   get: (id: string) => apiClient.get<Evaluation>(`/api/v1/evaluations/${id}`).then((r) => r.data),
   create: (data: EvaluationCreate) =>
     apiClient.post<Evaluation>("/api/v1/evaluations", data).then((r) => r.data),
+  /** Returns an EventSource for real-time status updates. Caller must close it. */
+  stream: (id: string) =>
+    new EventSource(
+      `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/evaluations/${id}/stream`
+    ),
 };
 
 // ── Prompts API ───────────────────────────────────────────────────────────
@@ -161,5 +178,85 @@ export const testSuitesApi = {
   get: (id: string) => apiClient.get<TestSuite>(`/api/v1/test-suites/${id}`).then((r) => r.data),
   create: (data: TestSuiteCreate) =>
     apiClient.post<TestSuite>("/api/v1/test-suites", data).then((r) => r.data),
+  run: (suiteId: string, modelConfigId: string) =>
+    apiClient
+      .post<TestRun>(`/api/v1/test-suites/${suiteId}/run`, { model_config_id: modelConfigId })
+      .then((r) => r.data),
+  listRuns: (suiteId: string) =>
+    apiClient.get<TestRun[]>(`/api/v1/test-suites/${suiteId}/runs`).then((r) => r.data),
   delete: (id: string) => apiClient.delete(`/api/v1/test-suites/${id}`),
 };
+
+// ── Benchmark Types ───────────────────────────────────────────────────────
+
+export interface BenchmarkItem {
+  id: string;
+  input: string;
+  expected_output: string | null;
+  expected_tags: string | null;
+  meta: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface Benchmark {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  source_url: string | null;
+  author: string | null;
+  item_count: number;
+  items: BenchmarkItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BenchmarkCreate {
+  name: string;
+  description?: string;
+  category?: string;
+  source_url?: string;
+  author?: string;
+  items?: { input: string; expected_output?: string; expected_tags?: string; meta?: Record<string, unknown> }[];
+}
+
+export interface BenchmarkRunResult {
+  benchmark_id: string;
+  model_config_id: string;
+  total_items: number;
+  pass_count: number;
+  fail_count: number;
+  pass_rate: number;
+  avg_latency_ms: number | null;
+  total_cost_usd: number;
+  results: {
+    item_id: string;
+    input: string;
+    response: string;
+    passed: boolean;
+    latency_ms: number | null;
+    cost_usd: number | null;
+  }[];
+}
+
+// ── Benchmarks API ────────────────────────────────────────────────────────
+
+export const benchmarksApi = {
+  list: () => apiClient.get<Benchmark[]>("/api/v1/benchmarks").then((r) => r.data),
+  get: (id: string) => apiClient.get<Benchmark>(`/api/v1/benchmarks/${id}`).then((r) => r.data),
+  create: (data: BenchmarkCreate) =>
+    apiClient.post<Benchmark>("/api/v1/benchmarks", data).then((r) => r.data),
+  import: (data: BenchmarkCreate & { items: BenchmarkCreate["items"] }) =>
+    apiClient.post<Benchmark>("/api/v1/benchmarks/import", data).then((r) => r.data),
+  exportUrl: (id: string) =>
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/benchmarks/${id}/export`,
+  run: (id: string, modelConfigId: string, itemLimit?: number) =>
+    apiClient
+      .post<BenchmarkRunResult>(`/api/v1/benchmarks/${id}/run`, {
+        model_config_id: modelConfigId,
+        item_limit: itemLimit,
+      })
+      .then((r) => r.data),
+  delete: (id: string) => apiClient.delete(`/api/v1/benchmarks/${id}`),
+};
+

@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.test_suite import TestCase, TestSuite
-from app.schemas.test_suite import TestSuiteCreate, TestSuiteOut
+from app.schemas.test_suite import TestRunOut, TestRunRequest, TestSuiteCreate, TestSuiteOut
+from app.services.test_suite_service import TestSuiteService
 
 router = APIRouter()
 
@@ -42,6 +43,26 @@ async def get_test_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
     return suite
 
 
+@router.post("/{suite_id}/run", response_model=TestRunOut, status_code=status.HTTP_201_CREATED)
+async def run_test_suite(
+    suite_id: str,
+    data: TestRunRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = TestSuiteService(db)
+    try:
+        run = await service.run_suite(suite_id=suite_id, model_config_id=data.model_config_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    return run
+
+
+@router.get("/{suite_id}/runs", response_model=list[TestRunOut])
+async def list_runs(suite_id: str, db: AsyncSession = Depends(get_db)):
+    service = TestSuiteService(db)
+    return await service.list_runs(suite_id)
+
+
 @router.delete("/{suite_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_test_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
     suite = await db.get(TestSuite, suite_id)
@@ -49,3 +70,4 @@ async def delete_test_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test suite not found")
     await db.delete(suite)
     await db.commit()
+

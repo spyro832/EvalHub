@@ -7,6 +7,18 @@ from app.models.model_config import ModelConfig
 from app.schemas.evaluation import EvaluationCreate
 from app.services.litellm_service import LiteLLMService
 
+_PROVIDER_PREFIXES: dict[str, str] = {
+    "ollama": "ollama/",
+    "huggingface": "huggingface/",
+}
+
+
+def _get_litellm_model_id(provider: str, model_id: str) -> str:
+    prefix = _PROVIDER_PREFIXES.get(provider, "")
+    if prefix and not model_id.startswith(prefix):
+        return f"{prefix}{model_id}"
+    return model_id
+
 
 class EvalService:
     def __init__(self, db: AsyncSession) -> None:
@@ -47,10 +59,7 @@ class EvalService:
             if model_config.api_key_encrypted:
                 api_key = decrypt_api_key(model_config.api_key_encrypted)
 
-            # LiteLLM requires provider-prefixed model IDs for some providers
-            model_id = model_config.model_id
-            if model_config.provider == "ollama" and not model_id.startswith("ollama/"):
-                model_id = f"ollama/{model_id}"
+            model_id = _get_litellm_model_id(model_config.provider, model_config.model_id)
 
             result = self.llm.call_model(
                 model_id=model_id,

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import benchmarks, cost, evaluations, models, prompts, test_suites
+from app.routers import benchmarks, cost, evaluations, models, prompts, sse, test_suites
 
 
 @asynccontextmanager
@@ -28,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"])
+app.include_router(sse.router, prefix="/api/v1/evaluations", tags=["evaluations"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(test_suites.router, prefix="/api/v1/test-suites", tags=["test-suites"])
