@@ -53,7 +53,7 @@ async def run_test_suite(
     try:
         run = await service.run_suite(suite_id=suite_id, model_config_id=data.model_config_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return run
 
 
@@ -70,4 +70,3 @@ async def delete_test_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test suite not found")
     await db.delete(suite)
     await db.commit()
-
