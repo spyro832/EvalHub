@@ -11,4 +11,22 @@ known-first-party = ["app"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+# Exclude infrastructure code that requires a running Celery worker / is not
+# exercised by unit tests.
+omit = [
+    "app/tasks/*",
+    "app/scripts/*",
+    "app/core/config.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__\\.",
+]
