@@ -6,24 +6,45 @@ from app.models.evaluation import EvalResult, Evaluation, EvaluationStatus
 from app.models.model_config import ModelConfig
 from app.schemas.evaluation import EvaluationCreate
 from app.services.litellm_service import LiteLLMService
-
-_PROVIDER_PREFIXES: dict[str, str] = {
-    "ollama": "ollama/",
-    "huggingface": "huggingface/",
-}
-
-
-def _get_litellm_model_id(provider: str, model_id: str) -> str:
-    prefix = _PROVIDER_PREFIXES.get(provider, "")
-    if prefix and not model_id.startswith(prefix):
-        return f"{prefix}{model_id}"
-    return model_id
+from app.services.model_utils import get_litellm_model_id
 
 
 class EvalService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.llm = LiteLLMService()
+
+    async def create_evaluation_pending(self, data: EvaluationCreate) -> Evaluation:
+        """Create an Evaluation + placeholder EvalResult rows, then dispatch a Celery task.
+
+        Returns immediately with status=PENDING so the HTTP response is fast.
+        The actual LLM calls happen in the background worker.
+        """
+        from app.tasks.eval_tasks import run_evaluation
+
+        evaluation = Evaluation(
+            name=data.name,
+            prompt=data.prompt,
+            status=EvaluationStatus.PENDING,
+        )
+        self.db.add(evaluation)
+        await self.db.flush()
+
+        # Create placeholder rows — one per requested model so the SSE can count progress
+        for model_config_id in data.model_ids:
+            placeholder = EvalResult(
+                evaluation_id=evaluation.id,
+                model_config_id=model_config_id,
+            )
+            self.db.add(placeholder)
+
+        await self.db.commit()
+        await self.db.refresh(evaluation)
+
+        # Dispatch background task — the worker fills in response/metrics
+        run_evaluation.delay(evaluation.id)
+
+        return evaluation
 
     async def create_evaluation(self, data: EvaluationCreate) -> Evaluation:
         evaluation = Evaluation(
@@ -59,7 +80,7 @@ class EvalService:
             if model_config.api_key_encrypted:
                 api_key = decrypt_api_key(model_config.api_key_encrypted)
 
-            model_id = _get_litellm_model_id(model_config.provider, model_config.model_id)
+            model_id = get_litellm_model_id(model_config.provider, model_config.model_id)
 
             result = self.llm.call_model(
                 model_id=model_id,

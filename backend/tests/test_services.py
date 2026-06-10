@@ -1,26 +1,53 @@
 import pytest
 
-from app.services.eval_service import _get_litellm_model_id
+from app.services.model_utils import get_litellm_model_id, score_response
 
 
 def test_ollama_prefix_added():
-    assert _get_litellm_model_id("ollama", "llama3.2") == "ollama/llama3.2"
+    assert get_litellm_model_id("ollama", "llama3.2") == "ollama/llama3.2"
 
 
 def test_ollama_prefix_not_doubled():
-    assert _get_litellm_model_id("ollama", "ollama/llama3.2") == "ollama/llama3.2"
+    assert get_litellm_model_id("ollama", "ollama/llama3.2") == "ollama/llama3.2"
 
 
 def test_openai_no_prefix():
-    assert _get_litellm_model_id("openai", "gpt-4o") == "gpt-4o"
+    assert get_litellm_model_id("openai", "gpt-4o") == "gpt-4o"
 
 
 def test_anthropic_no_prefix():
-    assert _get_litellm_model_id("anthropic", "claude-3-5-sonnet-20241022") == "claude-3-5-sonnet-20241022"
+    assert (
+        get_litellm_model_id("anthropic", "claude-3-5-sonnet-20241022")
+        == "claude-3-5-sonnet-20241022"
+    )
 
 
 def test_huggingface_prefix_added():
-    assert _get_litellm_model_id("huggingface", "starcoder") == "huggingface/starcoder"
+    assert get_litellm_model_id("huggingface", "starcoder") == "huggingface/starcoder"
+
+
+def test_score_response_expected_output_match():
+    assert score_response("The capital is Paris.", "Paris", None) is True
+
+
+def test_score_response_expected_output_no_match():
+    assert score_response("Berlin is in Germany.", "Paris", None) is False
+
+
+def test_score_response_tags_all_match():
+    assert score_response("def foo(): return True", None, "def,return") is True
+
+
+def test_score_response_tags_partial_no_match():
+    assert score_response("def foo(): pass", None, "def,return") is False
+
+
+def test_score_response_no_criteria_non_empty():
+    assert score_response("anything", None, None) is True
+
+
+def test_score_response_no_criteria_empty():
+    assert score_response("  ", None, None) is False
 
 
 @pytest.mark.anyio

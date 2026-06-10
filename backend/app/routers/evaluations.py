@@ -13,8 +13,13 @@ async def create_evaluation(
     data: EvaluationCreate,
     db: AsyncSession = Depends(get_db),
 ):
+    """Create an evaluation and dispatch it to a Celery worker.
+
+    Returns immediately with status=pending. Poll GET /{id} or stream
+    GET /{id}/stream for real-time progress.
+    """
     service = EvalService(db)
-    return await service.create_evaluation(data)
+    return await service.create_evaluation_pending(data)
 
 
 @router.get("", response_model=list[EvaluationListItem])

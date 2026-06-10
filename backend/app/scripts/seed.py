@@ -199,90 +199,13 @@ async def seed():
 
         await db.commit()
         print("✅ Seed data created:")
-        print(f"  - 1 model config (Ollama Llama 3.2)")
+        print("  - 1 model config (Ollama Llama 3.2)")
         print(f"  - {len(prompts)} prompts")
         print(f"  - 1 test suite with {len(test_cases)} test cases")
-        print(f"  - 3 benchmarks:")
+        print("  - 3 benchmarks:")
         print(f"    · Python Fundamentals ({len(coding_items)} items)")
         print(f"    · Factual Q&A ({len(rag_items)} items)")
         print(f"    · English to Spanish Translation ({len(translation_items)} items)")
-
-
-if __name__ == "__main__":
-    asyncio.run(seed())
-
-
-async def seed():
-    async with AsyncSessionLocal() as db:
-        # Sample model configs
-        ollama = ModelConfig(
-            name="Llama 3.2 (Ollama)",
-            provider="ollama",
-            model_id="llama3.2",
-            base_url="http://host.docker.internal:11434",
-            is_local=True,
-        )
-        db.add(ollama)
-        await db.flush()
-
-        # Sample prompts
-        prompts = [
-            Prompt(
-                name="Python Code Review",
-                content="Review the following Python code and suggest improvements:\n\n{code}",
-                description="General Python code review prompt",
-                tags="python,code-review",
-            ),
-            Prompt(
-                name="Explain Like I'm 5",
-                content="Explain the following concept in simple terms a 5-year-old could understand: {concept}",
-                description="Simplification prompt",
-                tags="explanation,simplification",
-            ),
-            Prompt(
-                name="SQL Query Optimizer",
-                content="Analyze and optimize this SQL query for performance:\n\n{query}",
-                description="SQL optimization prompt",
-                tags="sql,optimization,database",
-            ),
-        ]
-        for p in prompts:
-            db.add(p)
-
-        # Sample test suite
-        coding_suite = TestSuite(
-            name="Python Coding Benchmark",
-            description="Tests for Python code generation quality",
-            category="coding",
-        )
-        db.add(coding_suite)
-        await db.flush()
-
-        test_cases = [
-            TestCase(
-                suite_id=coding_suite.id,
-                input="Write a Python function to check if a string is a palindrome.",
-                expected_tags="python,def,return",
-            ),
-            TestCase(
-                suite_id=coding_suite.id,
-                input="Write a Python function to flatten a nested list.",
-                expected_tags="python,def,list",
-            ),
-            TestCase(
-                suite_id=coding_suite.id,
-                input="Write a Python decorator that logs function execution time.",
-                expected_tags="python,def,decorator",
-            ),
-        ]
-        for tc in test_cases:
-            db.add(tc)
-
-        await db.commit()
-        print("✅ Seed data created:")
-        print(f"  - 1 model config (Ollama Llama 3.2)")
-        print(f"  - {len(prompts)} prompts")
-        print(f"  - 1 test suite with {len(test_cases)} test cases")
 
 
 if __name__ == "__main__":

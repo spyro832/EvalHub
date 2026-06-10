@@ -17,14 +17,15 @@ from app.schemas.benchmark import (
     BenchmarkRunRequest,
     BenchmarkRunResult,
 )
-from app.services.eval_service import _get_litellm_model_id
 from app.services.litellm_service import LiteLLMService
+from app.services.model_utils import get_litellm_model_id, score_response
 
 router = APIRouter()
 _llm = LiteLLMService()
 
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
+
 
 @router.get("", response_model=list[BenchmarkOut])
 async def list_benchmarks(db: AsyncSession = Depends(get_db)):
@@ -71,6 +72,7 @@ async def delete_benchmark(benchmark_id: str, db: AsyncSession = Depends(get_db)
 
 
 # ── Import / Export ────────────────────────────────────────────────────────────
+
 
 @router.post("/import", response_model=BenchmarkOut, status_code=status.HTTP_201_CREATED)
 async def import_benchmark(data: BenchmarkImport, db: AsyncSession = Depends(get_db)):
@@ -128,6 +130,7 @@ async def export_benchmark(benchmark_id: str, db: AsyncSession = Depends(get_db)
 
 # ── Run ────────────────────────────────────────────────────────────────────────
 
+
 @router.post("/{benchmark_id}/run", response_model=BenchmarkRunResult)
 async def run_benchmark(
     benchmark_id: str,
@@ -147,7 +150,7 @@ async def run_benchmark(
     if model_config.api_key_encrypted:
         api_key = decrypt_api_key(model_config.api_key_encrypted)
 
-    model_id = _get_litellm_model_id(model_config.provider, model_config.model_id)
+    model_id = get_litellm_model_id(model_config.provider, model_config.model_id)
 
     items = list(benchmark.items)
     if data.item_limit:
@@ -168,7 +171,7 @@ async def run_benchmark(
                 base_url=model_config.base_url,
             )
             response = call.response or ""
-            passed = _score(item, response)
+            passed = score_response(response, item.expected_output, item.expected_tags)
         except Exception as exc:
             response = f"ERROR: {exc}"
             passed = False
@@ -207,17 +210,3 @@ async def run_benchmark(
     )
 
 
-def _score(item: BenchmarkItem, response: str) -> bool:
-    """Return True if the response satisfies the item's expected criteria."""
-    response_lower = response.lower()
-    if item.expected_output:
-        if item.expected_output.lower() in response_lower:
-            return True
-    if item.expected_tags:
-        tags = [t.strip() for t in item.expected_tags.split(",") if t.strip()]
-        if tags and all(t.lower() in response_lower for t in tags):
-            return True
-    # If neither criterion set, treat as pass (free-form item)
-    if not item.expected_output and not item.expected_tags:
-        return True
-    return False

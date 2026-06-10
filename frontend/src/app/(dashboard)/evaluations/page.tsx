@@ -1,22 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Play, Plus } from "lucide-react";
-import { evaluationsApi, modelsApi, type Evaluation } from "@/lib/api";
+import { Play } from "lucide-react";
+import { evaluationsApi, modelsApi, type EvalSSEEvent, type Evaluation } from "@/lib/api";
 import { formatCost, formatLatency, truncate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const COLORS = [
-  "#6366f1",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-  "#ec4899",
-  "#84cc16",
+  "#6366f1", "#22c55e", "#f59e0b", "#ef4444",
+  "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16",
 ];
 
 export default function EvaluationsPage() {
@@ -25,17 +19,63 @@ export default function EvaluationsPage() {
   const [evalName, setEvalName] = useState("");
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [activeEval, setActiveEval] = useState<Evaluation | null>(null);
+  const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
+  const esRef = useRef<EventSource | null>(null);
 
   const { data: models } = useQuery({ queryKey: ["models"], queryFn: modelsApi.list });
   const { data: evaluations } = useQuery({
     queryKey: ["evaluations"],
     queryFn: evaluationsApi.list,
+    refetchInterval: activeEval && ["pending", "running"].includes(activeEval.status) ? 3000 : false,
   });
+
+  // Open SSE stream once we have a pending/running evaluation
+  useEffect(() => {
+    if (!activeEval || !["pending", "running"].includes(activeEval.status)) return;
+
+    // Close any existing stream
+    esRef.current?.close();
+
+    const es = evaluationsApi.stream(activeEval.id);
+    esRef.current = es;
+
+    es.onmessage = (event) => {
+      const data: EvalSSEEvent = JSON.parse(event.data);
+
+      if (data.error) {
+        es.close();
+        return;
+      }
+
+      setProgress({ completed: data.completed, total: data.total });
+
+      if (data.status === "completed" || data.status === "failed") {
+        es.close();
+        esRef.current = null;
+        setProgress(null);
+        // Fetch the full evaluation with results
+        evaluationsApi.get(activeEval.id).then(setActiveEval).catch(console.error);
+        queryClient.invalidateQueries({ queryKey: ["evaluations"] });
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      esRef.current = null;
+      setProgress(null);
+    };
+
+    return () => {
+      es.close();
+      esRef.current = null;
+    };
+  }, [activeEval?.id, activeEval?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const runEval = useMutation({
     mutationFn: evaluationsApi.create,
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       setActiveEval(data);
+      setProgress({ completed: 0, total: selectedModels.length });
       queryClient.invalidateQueries({ queryKey: ["evaluations"] });
     },
   });
@@ -47,6 +87,7 @@ export default function EvaluationsPage() {
   };
 
   const canRun = prompt.trim().length > 0 && selectedModels.length > 0;
+  const isStreaming = activeEval && ["pending", "running"].includes(activeEval.status);
 
   return (
     <div className="space-y-6">
@@ -115,7 +156,7 @@ export default function EvaluationsPage() {
           </div>
 
           <button
-            disabled={!canRun || runEval.isPending}
+            disabled={!canRun || runEval.isPending || !!isStreaming}
             onClick={() =>
               runEval.mutate({
                 prompt,
@@ -128,7 +169,7 @@ export default function EvaluationsPage() {
             {runEval.isPending ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Running…
+                Queuing…
               </>
             ) : (
               <>
@@ -141,11 +182,33 @@ export default function EvaluationsPage() {
 
         {/* Results panel */}
         <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="text-sm font-medium text-white mb-4">
-            {activeEval ? "Results" : "Results will appear here"}
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-medium text-white">
+              {activeEval ? "Results" : "Results will appear here"}
+            </h2>
+            {isStreaming && progress && (
+              <span className="text-xs text-zinc-400">
+                {progress.completed}/{progress.total} models
+              </span>
+            )}
+          </div>
 
-          {activeEval && activeEval.results.length > 0 && (
+          {/* Progress bar while streaming */}
+          {isStreaming && progress && (
+            <div className="mb-4 space-y-2">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+                  style={{ width: progress.total ? `${(progress.completed / progress.total) * 100}%` : "0%" }}
+                />
+              </div>
+              <p className="text-xs text-zinc-500 text-center">
+                Running models — {progress.completed} of {progress.total} complete…
+              </p>
+            </div>
+          )}
+
+          {activeEval && activeEval.results.length > 0 && !isStreaming && (
             <div className="space-y-4">
               {/* Latency chart */}
               <div>
@@ -232,11 +295,22 @@ export default function EvaluationsPage() {
                       ? "bg-green-500"
                       : ev.status === "failed"
                         ? "bg-red-500"
-                        : "bg-yellow-500"
+                        : ev.status === "running"
+                          ? "bg-blue-500 animate-pulse"
+                          : "bg-yellow-500 animate-pulse"
                   }`}
                 />
                 <span className="flex-1 truncate text-sm text-zinc-300">
                   {ev.name ?? truncate(ev.prompt, 80)}
+                </span>
+                <span
+                  className={`shrink-0 text-xs font-medium ${
+                    ev.status === "completed" ? "text-green-500" :
+                    ev.status === "failed" ? "text-red-500" :
+                    "text-yellow-500"
+                  }`}
+                >
+                  {ev.status}
                 </span>
                 <span className="shrink-0 text-xs text-zinc-500">
                   {new Date(ev.created_at).toLocaleString()}

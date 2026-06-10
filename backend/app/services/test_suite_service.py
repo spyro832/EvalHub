@@ -7,25 +7,7 @@ from app.core.security import decrypt_api_key
 from app.models.model_config import ModelConfig
 from app.models.test_suite import TestCase, TestCaseResult, TestRun, TestRunStatus, TestSuite
 from app.services.litellm_service import LiteLLMService
-
-
-def _get_litellm_model_id(provider: str, model_id: str) -> str:
-    prefixes = {"ollama": "ollama/", "huggingface": "huggingface/"}
-    prefix = prefixes.get(provider, "")
-    if prefix and not model_id.startswith(prefix):
-        return f"{prefix}{model_id}"
-    return model_id
-
-
-def _score_result(response: str, case: TestCase) -> bool:
-    """Simple scoring: check if expected_output substring present, or all expected_tags present."""
-    if case.expected_output:
-        return case.expected_output.lower() in response.lower()
-    if case.expected_tags:
-        tags = [t.strip().lower() for t in case.expected_tags.split(",") if t.strip()]
-        return all(tag in response.lower() for tag in tags)
-    # No expected output/tags — treat as pass if there's a non-empty response
-    return bool(response.strip())
+from app.services.model_utils import get_litellm_model_id, score_response
 
 
 class TestSuiteService:
@@ -54,7 +36,7 @@ class TestSuiteService:
         if model_config.api_key_encrypted:
             api_key = decrypt_api_key(model_config.api_key_encrypted)
 
-        model_id = _get_litellm_model_id(model_config.provider, model_config.model_id)
+        model_id = get_litellm_model_id(model_config.provider, model_config.model_id)
 
         latencies: list[int] = []
         total_cost = 0.0
@@ -105,7 +87,7 @@ class TestSuiteService:
                 api_key=api_key,
                 base_url=base_url,
             )
-            passed = _score_result(result.response, case)
+            passed = score_response(result.response, case.expected_output, case.expected_tags)
             return TestCaseResult(
                 run_id=run_id,
                 case_id=case.id,
@@ -124,8 +106,6 @@ class TestSuiteService:
 
     async def list_runs(self, suite_id: str) -> list[TestRun]:
         result = await self.db.execute(
-            select(TestRun)
-            .where(TestRun.suite_id == suite_id)
-            .order_by(TestRun.created_at.desc())
+            select(TestRun).where(TestRun.suite_id == suite_id).order_by(TestRun.created_at.desc())
         )
         return list(result.scalars().all())

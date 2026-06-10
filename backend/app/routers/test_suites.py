@@ -1,9 +1,13 @@
+import asyncio
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.test_suite import TestCase, TestSuite
+from app.models.test_suite import TestCase, TestCaseResult, TestRun, TestRunStatus, TestSuite
 from app.schemas.test_suite import TestRunOut, TestRunRequest, TestSuiteCreate, TestSuiteOut
 from app.services.test_suite_service import TestSuiteService
 
@@ -49,11 +53,27 @@ async def run_test_suite(
     data: TestRunRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    service = TestSuiteService(db)
-    try:
-        run = await service.run_suite(suite_id=suite_id, model_config_id=data.model_config_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    """Create a TestRun record and dispatch execution to a Celery worker.
+
+    Returns immediately with status=pending. Stream progress via
+    GET /{suite_id}/runs/{run_id}/stream.
+    """
+    from app.tasks.eval_tasks import run_test_suite_task
+
+    suite = await db.get(TestSuite, suite_id)
+    if not suite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test suite not found")
+
+    run = TestRun(
+        suite_id=suite_id,
+        model_config_id=data.model_config_id,
+        status=TestRunStatus.PENDING,
+    )
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+
+    run_test_suite_task.delay(run.id)
     return run
 
 
@@ -61,6 +81,52 @@ async def run_test_suite(
 async def list_runs(suite_id: str, db: AsyncSession = Depends(get_db)):
     service = TestSuiteService(db)
     return await service.list_runs(suite_id)
+
+
+@router.get("/{suite_id}/runs/{run_id}/stream")
+async def stream_run(
+    suite_id: str,
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Stream test-suite run progress as Server-Sent Events (1 event/second)."""
+
+    async def _stream():
+        _MAX_POLLS = 300  # 5-minute ceiling
+        for _ in range(_MAX_POLLS):
+            run_row = await db.execute(select(TestRun).where(TestRun.id == run_id))
+            run = run_row.scalar_one_or_none()
+            if not run:
+                yield f"data: {json.dumps({'error': 'TestRun not found'})}\n\n"
+                return
+
+            completed_row = await db.execute(
+                select(func.count(TestCaseResult.id)).where(TestCaseResult.run_id == run_id)
+            )
+            completed_count = completed_row.scalar_one()
+
+            payload = {
+                "run_id": run.id,
+                "status": run.status.value,
+                "pass_count": run.pass_count,
+                "fail_count": run.fail_count,
+                "completed": completed_count,
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+
+            if run.status.value in ("completed", "failed"):
+                return
+
+            await asyncio.sleep(1)
+            db.expire_all()
+
+        yield f"data: {json.dumps({'error': 'timeout'})}\n\n"
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.delete("/{suite_id}", status_code=status.HTTP_204_NO_CONTENT)

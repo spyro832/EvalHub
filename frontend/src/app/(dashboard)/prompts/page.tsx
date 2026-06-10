@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, BookOpen } from "lucide-react";
-import { promptsApi, type PromptCreate } from "@/lib/api";
+import { promptsApi, type Prompt, type PromptCreate } from "@/lib/api";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { toast } from "@/lib/toast";
 
 function PromptCard({
   prompt,
   onDelete,
 }: {
-  prompt: { id: string; name: string; content: string; tags: string | null; updated_at: string };
-  onDelete: (id: string) => void;
+  prompt: Prompt;
+  onDelete: (p: Prompt) => void;
 }) {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
@@ -31,7 +33,7 @@ function PromptCard({
           )}
         </div>
         <button
-          onClick={() => onDelete(prompt.id)}
+          onClick={() => onDelete(prompt)}
           className="shrink-0 rounded-md p-1.5 text-zinc-600 hover:text-red-400 transition-colors"
         >
           <Trash2 className="h-4 w-4" />
@@ -46,6 +48,7 @@ export default function PromptsPage() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<PromptCreate>({ name: "", content: "" });
+  const [deleteTarget, setDeleteTarget] = useState<Prompt | null>(null);
 
   const { data: prompts, isLoading } = useQuery({
     queryKey: ["prompts"],
@@ -58,12 +61,18 @@ export default function PromptsPage() {
       queryClient.invalidateQueries({ queryKey: ["prompts"] });
       setForm({ name: "", content: "" });
       setShowForm(false);
+      toast.success("Prompt saved");
     },
+    onError: (err: Error) => toast.error(`Failed to save prompt: ${err.message}`),
   });
 
   const remove = useMutation({
     mutationFn: promptsApi.delete,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["prompts"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prompts"] });
+      toast.success("Prompt deleted");
+    },
+    onError: (err: Error) => toast.error(`Failed to delete prompt: ${err.message}`),
   });
 
   return (
@@ -132,10 +141,19 @@ export default function PromptsPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {prompts.map((p) => (
-            <PromptCard key={p.id} prompt={p} onDelete={(id) => remove.mutate(id)} />
+            <PromptCard key={p.id} prompt={p} onDelete={setDeleteTarget} />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete prompt?"
+        description={`"${deleteTarget?.name}" will be permanently deleted.`}
+        confirmLabel="Delete"
+        onConfirm={() => deleteTarget && remove.mutate(deleteTarget.id)}
+      />
     </div>
   );
 }

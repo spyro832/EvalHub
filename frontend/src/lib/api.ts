@@ -130,6 +130,25 @@ export interface TestRun {
   created_at: string;
 }
 
+/** SSE payload from /evaluations/{id}/stream */
+export interface EvalSSEEvent {
+  id: string;
+  status: Evaluation["status"];
+  completed: number;
+  total: number;
+  error?: string;
+}
+
+/** SSE payload from /test-suites/{id}/runs/{runId}/stream */
+export interface RunSSEEvent {
+  run_id: string;
+  status: TestRun["status"];
+  pass_count: number;
+  fail_count: number;
+  completed: number;
+  error?: string;
+}
+
 // ── Models API ────────────────────────────────────────────────────────────
 
 export const modelsApi = {
@@ -184,6 +203,11 @@ export const testSuitesApi = {
       .then((r) => r.data),
   listRuns: (suiteId: string) =>
     apiClient.get<TestRun[]>(`/api/v1/test-suites/${suiteId}/runs`).then((r) => r.data),
+  /** Returns an EventSource for real-time run progress. Caller must close it. */
+  streamRun: (suiteId: string, runId: string) =>
+    new EventSource(
+      `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/test-suites/${suiteId}/runs/${runId}/stream`
+    ),
   delete: (id: string) => apiClient.delete(`/api/v1/test-suites/${id}`),
 };
 

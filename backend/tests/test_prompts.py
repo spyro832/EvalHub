@@ -32,7 +32,9 @@ async def test_get_prompt_not_found(client):
 
 @pytest.mark.anyio
 async def test_delete_prompt(client):
-    create = await client.post("/api/v1/prompts", json={"name": "To Delete", "content": "delete me"})
+    create = await client.post(
+        "/api/v1/prompts", json={"name": "To Delete", "content": "delete me"}
+    )
     prompt_id = create.json()["id"]
 
     delete = await client.delete(f"/api/v1/prompts/{prompt_id}")

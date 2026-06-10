@@ -6,7 +6,7 @@ celery_app = Celery(
     "evalhub",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.eval_tasks"],
+    include=["app.tasks.eval_tasks"],  # registers run_evaluation + run_test_suite
 )
 
 celery_app.conf.update(

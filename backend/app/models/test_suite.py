@@ -24,9 +24,7 @@ class TestCase(Base, TimestampMixin):
     __tablename__ = "test_cases"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    suite_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("test_suites.id"), nullable=False
-    )
+    suite_id: Mapped[str] = mapped_column(String(36), ForeignKey("test_suites.id"), nullable=False)
     input: Mapped[str] = mapped_column(Text, nullable=False)
     expected_output: Mapped[str | None] = mapped_column(Text, nullable=True)
     expected_tags: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -45,9 +43,7 @@ class TestRun(Base, TimestampMixin):
     __tablename__ = "test_runs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    suite_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("test_suites.id"), nullable=False
-    )
+    suite_id: Mapped[str] = mapped_column(String(36), ForeignKey("test_suites.id"), nullable=False)
     model_config_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("model_configs.id"), nullable=False
     )
@@ -64,12 +60,8 @@ class TestCaseResult(Base, TimestampMixin):
     __tablename__ = "test_case_results"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    run_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("test_runs.id"), nullable=False
-    )
-    case_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("test_cases.id"), nullable=False
-    )
+    run_id: Mapped[str] = mapped_column(String(36), ForeignKey("test_runs.id"), nullable=False)
+    case_id: Mapped[str] = mapped_column(String(36), ForeignKey("test_cases.id"), nullable=False)
     response: Mapped[str | None] = mapped_column(Text, nullable=True)
     passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)

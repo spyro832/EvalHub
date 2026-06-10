@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
-import { modelsApi, type ModelConfigCreate } from "@/lib/api";
+import { modelsApi, type ModelConfig, type ModelConfigCreate } from "@/lib/api";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { toast } from "@/lib/toast";
 
 const PROVIDERS = [
   { id: "openai", label: "OpenAI" },
@@ -29,8 +31,10 @@ function AddModelForm({ onClose }: { onClose: () => void }) {
     mutationFn: modelsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["models"] });
+      toast.success("Model added successfully");
       onClose();
     },
+    onError: (err: Error) => toast.error(`Failed to add model: ${err.message}`),
   });
 
   const set = (key: keyof ModelConfigCreate, value: string | boolean) =>
@@ -127,11 +131,16 @@ function AddModelForm({ onClose }: { onClose: () => void }) {
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ModelConfig | null>(null);
   const { data: models, isLoading } = useQuery({ queryKey: ["models"], queryFn: modelsApi.list });
 
   const deleteModel = useMutation({
     mutationFn: (id: string) => modelsApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["models"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["models"] });
+      toast.success("Model removed");
+    },
+    onError: (err: Error) => toast.error(`Failed to remove model: ${err.message}`),
   });
 
   return (
@@ -177,7 +186,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => deleteModel.mutate(m.id)}
+                    onClick={() => setDeleteTarget(m)}
                     className="shrink-0 rounded-md p-1.5 text-zinc-600 hover:text-red-400 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -188,6 +197,15 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Remove model?"
+        description={`"${deleteTarget?.name}" will be permanently removed. Any evaluations using this model will retain their results.`}
+        confirmLabel="Remove"
+        onConfirm={() => deleteTarget && deleteModel.mutate(deleteTarget.id)}
+      />
     </div>
   );
 }
