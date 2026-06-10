@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import benchmarks, cost, evaluations, models, prompts, sse, test_suites
+from app.routers import benchmarks, cost, evaluations, models, prompts, regression, sse, test_suites
 
 
 @asynccontextmanager
@@ -34,6 +34,7 @@ app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(test_suites.router, prefix="/api/v1/test-suites", tags=["test-suites"])
 app.include_router(cost.router, prefix="/api/v1/cost", tags=["cost"])
 app.include_router(benchmarks.router, prefix="/api/v1/benchmarks", tags=["benchmarks"])
+app.include_router(regression.router, prefix="/api/v1/regression", tags=["regression"])
 
 
 @app.get("/health")

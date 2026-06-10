@@ -263,6 +263,57 @@ export interface BenchmarkRunResult {
   }[];
 }
 
+// ── Regression Types ──────────────────────────────────────────────────────
+
+export interface ModelTrend {
+  model_config_id: string;
+  model_name: string;
+  run_count: number;
+  latest_pass_rate: number;
+  peak_pass_rate: number;
+  delta: number;
+  has_regression: boolean;
+  sparkline: number[];
+}
+
+export interface SuiteSummary {
+  suite_id: string;
+  suite_name: string;
+  category: string | null;
+  has_regression: boolean;
+  models: ModelTrend[];
+}
+
+export interface RunPoint {
+  run_id: string;
+  model_config_id: string;
+  model_name: string;
+  pass_rate: number;
+  pass_count: number;
+  fail_count: number;
+  total: number;
+  avg_latency_ms: number | null;
+  total_cost_usd: number;
+  created_at: string;
+}
+
+export interface SuiteTrend {
+  suite_id: string;
+  suite_name: string;
+  runs: RunPoint[];
+}
+
+// ── Regression API ────────────────────────────────────────────────────────
+
+export const regressionApi = {
+  getSuitesSummary: () =>
+    apiClient.get<SuiteSummary[]>("/api/v1/regression/suites").then((r) => r.data),
+  getTrend: (suiteId: string) =>
+    apiClient
+      .get<SuiteTrend>(`/api/v1/regression/suites/${suiteId}/trend`)
+      .then((r) => r.data),
+};
+
 // ── Benchmarks API ────────────────────────────────────────────────────────
 
 export const benchmarksApi = {
