@@ -1,4 +1,3 @@
-import pytest
 
 from app.services.model_utils import get_litellm_model_id, score_response
 

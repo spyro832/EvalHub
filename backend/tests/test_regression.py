@@ -2,8 +2,6 @@
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 from app.models.model_config import ModelConfig
 from app.models.test_suite import TestRun, TestRunStatus, TestSuite
 

@@ -1,6 +1,5 @@
 """Tests for the cost router and CostService."""
 
-import pytest
 
 from app.models.evaluation import EvalResult, Evaluation, EvaluationStatus
 

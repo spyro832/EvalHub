@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 async def test_list_test_suites(client):
     """GET /test-suites returns a valid list (may be non-empty due to test ordering)."""

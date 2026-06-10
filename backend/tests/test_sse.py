@@ -7,8 +7,6 @@ the first iteration (no 1-second sleep), keeping tests fast.
 
 import json
 
-import pytest
-
 from app.models.evaluation import EvalResult, Evaluation, EvaluationStatus
 from app.models.model_config import ModelConfig
 from app.models.test_suite import TestRun, TestRunStatus, TestSuite

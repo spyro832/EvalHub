@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 async def test_list_evaluations(client):
     response = await client.get("/api/v1/evaluations")

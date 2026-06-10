@@ -4,8 +4,6 @@ Unit tests for EvalService._run_single_model — mock LiteLLM so no real API cal
 
 from unittest.mock import patch
 
-import pytest
-
 from app.models.model_config import ModelConfig
 from app.services.eval_service import EvalService
 from app.services.litellm_service import ModelCallResult
