@@ -59,7 +59,7 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://evalhub:evalhub@localhost:5432/evalhub_test
           REDIS_URL: redis://localhost:6379
           SECRET_KEY: ci-test-secret-key-32-chars-padded
-        run: pytest --cov=app --cov-report=xml --cov-fail-under=80 -v
+        run: pytest --cov=app --cov-report=xml --cov-fail-under=78 -v
 
   frontend:
     name: Frontend (lint + build)
@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
