@@ -70,3 +70,22 @@ async def test_create_model_no_api_key(client):
 async def test_delete_model_not_found(client):
     response = await client.delete("/api/v1/models/nonexistent-id")
     assert response.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_delete_model_success(client):
+    """DELETE /{model_id} for an existing model → 204 (soft-deletes by setting is_active=False)."""
+    create = await client.post(
+        "/api/v1/models",
+        json={"name": "Deletable Model", "provider": "openai", "model_id": "gpt-4"},
+    )
+    assert create.status_code == 201
+    model_id = create.json()["id"]
+
+    delete = await client.delete(f"/api/v1/models/{model_id}")
+    assert delete.status_code == 204
+
+    # Soft-deleted model should no longer appear in the active list
+    list_resp = await client.get("/api/v1/models")
+    ids = [m["id"] for m in list_resp.json()]
+    assert model_id not in ids
