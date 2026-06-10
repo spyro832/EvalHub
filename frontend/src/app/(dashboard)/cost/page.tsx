@@ -3,15 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { costApi } from "@/lib/api";
 import { formatCost, formatTokens } from "@/lib/utils";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
+// recharts imports ready for future per-model chart (Step 10)
+// import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function CostPage() {
   const { data: summary, isLoading } = useQuery({

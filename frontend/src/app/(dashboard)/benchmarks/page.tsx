@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Beaker, Download, Play, Plus, Trash2, Upload, ChevronDown, ChevronUp } from "lucide-react";
+import { Beaker, Download, Play, Trash2, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import {
   benchmarksApi,
   modelsApi,
@@ -67,7 +67,7 @@ function RunResultPanel({ result }: { result: BenchmarkRunResult }) {
 
       {expanded && (
         <div className="space-y-1 max-h-64 overflow-y-auto">
-          {result.results.map((r, i) => (
+          {result.results.map((r) => (
             <div key={r.item_id} className="rounded border border-zinc-700 bg-zinc-900 p-2 text-xs">
               <div className="flex items-start gap-2">
                 <span className={`shrink-0 font-bold ${r.passed ? "text-green-400" : "text-red-400"}`}>

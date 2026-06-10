@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Play, Zap } from "lucide-react";
+import { Play } from "lucide-react";
 import { evaluationsApi, modelsApi, type Evaluation } from "@/lib/api";
 import { formatCost, formatLatency } from "@/lib/utils";
 import { cn } from "@/lib/utils";

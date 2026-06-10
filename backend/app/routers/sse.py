@@ -87,16 +87,12 @@ async def stream_evaluation(
 
 async def _run_stream(run_id: str, db: AsyncSession):
     """Yield SSE events for a test-suite run until it completes or times out."""
-    # Fetch suite's case count once upfront
+    # Validate run exists before entering the poll loop
     run_row = await db.execute(select(TestRun).where(TestRun.id == run_id))
     run = run_row.scalar_one_or_none()
     if not run:
         yield f"data: {json.dumps({'error': 'TestRun not found'})}\n\n"
         return
-
-    total_cases_row = await db.execute(
-        select(func.count(TestCaseResult.id)).where(TestCaseResult.run_id == run_id)
-    )
 
     for _ in range(_MAX_POLLS):
         run_row = await db.execute(select(TestRun).where(TestRun.id == run_id))
