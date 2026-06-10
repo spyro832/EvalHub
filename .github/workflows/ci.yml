@@ -59,7 +59,15 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://evalhub:evalhub@localhost:5432/evalhub_test
           REDIS_URL: redis://localhost:6379
           SECRET_KEY: ci-test-secret-key-32-chars-padded
-        run: pytest --cov=app --cov-report=xml --cov-fail-under=78 -v
+        run: |
+          set +e
+          pytest --cov=app --cov-report=xml --cov-fail-under=78 -v --tb=short 2>&1 | tee /tmp/pytest.txt
+          EXIT=$?
+          echo "## Pytest output (last 80 lines)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -80 /tmp/pytest.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $EXIT
 
   frontend:
     name: Frontend (lint + build)
