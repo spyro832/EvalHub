@@ -50,7 +50,6 @@ async def _create_run(
 # ── Empty-state tests ──────────────────────────────────────────────────────────
 
 
-@pytest.mark.anyio
 async def test_regression_suites_empty(client):
     """No completed runs yet → empty list."""
     response = await client.get("/api/v1/regression/suites")
@@ -58,7 +57,6 @@ async def test_regression_suites_empty(client):
     assert response.json() == []
 
 
-@pytest.mark.anyio
 async def test_regression_trend_not_found(client):
     """Suite that does not exist → 404."""
     response = await client.get("/api/v1/regression/suites/does-not-exist/trend")
@@ -68,7 +66,6 @@ async def test_regression_trend_not_found(client):
 # ── Data-present tests ─────────────────────────────────────────────────────────
 
 
-@pytest.mark.anyio
 async def test_regression_suites_with_regression(client, db_session):
     """
     Two runs where pass_rate drops ≥10 pp → has_regression = True.
@@ -101,7 +98,6 @@ async def test_regression_suites_with_regression(client, db_session):
     assert m["sparkline"] == [0.8, 0.5]
 
 
-@pytest.mark.anyio
 async def test_regression_suites_no_regression(client, db_session):
     """
     Two runs where pass_rate stays stable → has_regression = False.
@@ -128,7 +124,6 @@ async def test_regression_suites_no_regression(client, db_session):
     assert m["delta"] >= 0
 
 
-@pytest.mark.anyio
 async def test_regression_suites_single_run_no_regression(client, db_session):
     """A single run can never be a regression (no prior baseline)."""
     await _create_suite(db_session, "reg-s3", "Single Run Suite")
@@ -145,7 +140,6 @@ async def test_regression_suites_single_run_no_regression(client, db_session):
     assert single["models"][0]["has_regression"] is False
 
 
-@pytest.mark.anyio
 async def test_regression_trend_with_data(client, db_session):
     """
     GET /regression/suites/{id}/trend should return runs in chronological order.
@@ -167,7 +161,6 @@ async def test_regression_trend_with_data(client, db_session):
     assert run_a["total"] == 10
 
 
-@pytest.mark.anyio
 async def test_regression_trend_empty_suite(client, db_session):
     """A suite with no completed runs should return an empty runs list."""
     await _create_suite(db_session, "reg-s4", "Empty Trend Suite")

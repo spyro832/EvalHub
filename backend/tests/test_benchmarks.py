@@ -17,14 +17,12 @@ def _mock_call_result(response: str = "42") -> ModelCallResult:
     )
 
 
-@pytest.mark.anyio
 async def test_list_benchmarks_empty(client):
     response = await client.get("/api/v1/benchmarks")
     assert response.status_code == 200
     assert response.json() == []
 
 
-@pytest.mark.anyio
 async def test_create_benchmark_no_items(client):
     payload = {"name": "Empty Bench", "category": "coding"}
     response = await client.post("/api/v1/benchmarks", json=payload)
@@ -35,7 +33,6 @@ async def test_create_benchmark_no_items(client):
     assert data["items"] == []
 
 
-@pytest.mark.anyio
 async def test_create_benchmark_with_items(client):
     payload = {
         "name": "Python Bench",
@@ -53,13 +50,11 @@ async def test_create_benchmark_with_items(client):
     assert len(data["items"]) == 2
 
 
-@pytest.mark.anyio
 async def test_get_benchmark_not_found(client):
     response = await client.get("/api/v1/benchmarks/nonexistent")
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_import_benchmark(client):
     payload = {
         "name": "Imported Bench",
@@ -73,7 +68,6 @@ async def test_import_benchmark(client):
     assert data["item_count"] == 1
 
 
-@pytest.mark.anyio
 async def test_export_benchmark(client):
     # Create first
     create = await client.post(
@@ -93,7 +87,6 @@ async def test_export_benchmark(client):
     assert len(body["items"]) == 1
 
 
-@pytest.mark.anyio
 async def test_delete_benchmark(client):
     create = await client.post("/api/v1/benchmarks", json={"name": "To Delete"})
     bench_id = create.json()["id"]
@@ -108,7 +101,6 @@ async def test_delete_benchmark(client):
 # ── Run endpoint ──────────────────────────────────────────────────────────────
 
 
-@pytest.mark.anyio
 async def test_run_benchmark_not_found(client):
     """POST /{id}/run with a non-existent benchmark ID → 404."""
     response = await client.post(
@@ -118,7 +110,6 @@ async def test_run_benchmark_not_found(client):
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_run_benchmark_model_not_found(client):
     """POST /{id}/run with a valid benchmark but non-existent model → 404."""
     create = await client.post(
@@ -134,7 +125,6 @@ async def test_run_benchmark_model_not_found(client):
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_run_benchmark_success(client):
     """POST /{id}/run should call LiteLLM per item and return pass/fail stats."""
     # 1. Create a model config
@@ -182,7 +172,6 @@ async def test_run_benchmark_success(client):
     assert all(r["passed"] for r in data["results"])
 
 
-@pytest.mark.anyio
 async def test_run_benchmark_with_item_limit(client):
     """item_limit param should restrict how many items are evaluated."""
     model_resp = await client.post(
@@ -217,7 +206,6 @@ async def test_run_benchmark_with_item_limit(client):
     mock_llm.assert_called_once()
 
 
-@pytest.mark.anyio
 async def test_run_benchmark_llm_error(client):
     """If LiteLLM raises, the item should fail gracefully."""
     model_resp = await client.post(

@@ -50,7 +50,6 @@ def test_score_response_no_criteria_empty():
     assert score_response("  ", None, None) is False
 
 
-@pytest.mark.anyio
 async def test_create_model_no_api_key(client):
     payload = {
         "name": "Ollama Local",
@@ -66,13 +65,11 @@ async def test_create_model_no_api_key(client):
     assert "api_key" not in data
 
 
-@pytest.mark.anyio
 async def test_delete_model_not_found(client):
     response = await client.delete("/api/v1/models/nonexistent-id")
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_delete_model_success(client):
     """DELETE /{model_id} for an existing model → 204 (soft-deletes by setting is_active=False)."""
     create = await client.post(

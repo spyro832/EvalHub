@@ -22,7 +22,6 @@ def _fake_call_result(response: str = "Paris") -> ModelCallResult:
     )
 
 
-@pytest.mark.anyio
 async def test_run_single_model_not_found(db_session):
     """_run_single_model with a non-existent model_config_id returns an error EvalResult."""
     svc = EvalService(db_session)
@@ -35,7 +34,6 @@ async def test_run_single_model_not_found(db_session):
     assert result.response is None
 
 
-@pytest.mark.anyio
 async def test_run_single_model_success(db_session):
     """_run_single_model with a valid model and mocked LiteLLM returns a filled EvalResult."""
     model = ModelConfig(
@@ -59,7 +57,6 @@ async def test_run_single_model_success(db_session):
     assert result.error is None
 
 
-@pytest.mark.anyio
 async def test_run_single_model_llm_exception(db_session):
     """If LiteLLM raises, _run_single_model returns an error EvalResult."""
     model = ModelConfig(
@@ -79,7 +76,6 @@ async def test_run_single_model_llm_exception(db_session):
     assert result.response is None
 
 
-@pytest.mark.anyio
 async def test_run_single_model_with_encrypted_api_key(db_session):
     """If the model has an encrypted api_key, it should be decrypted and forwarded."""
     from app.core.security import encrypt_api_key
@@ -108,7 +104,6 @@ async def test_run_single_model_with_encrypted_api_key(db_session):
     assert captured.get("api_key") is not None  # key was decrypted and passed through
 
 
-@pytest.mark.anyio
 async def test_create_evaluation_blocking(db_session):
     """
     create_evaluation() (the older synchronous-flow method) should return a

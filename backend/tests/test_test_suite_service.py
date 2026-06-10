@@ -51,7 +51,6 @@ async def _seed_suite_and_model(db_session, suite_id: str, model_id: str) -> Non
     await db_session.flush()
 
 
-@pytest.mark.anyio
 async def test_run_suite_success(db_session):
     """run_suite() should create a COMPLETED TestRun with correct pass/fail counts."""
     await _seed_suite_and_model(db_session, "svc-s1", "svc-m1")
@@ -73,7 +72,6 @@ async def test_run_suite_success(db_session):
     assert run.total_cost_usd == pytest.approx(0.001)
 
 
-@pytest.mark.anyio
 async def test_run_suite_partial_failure(db_session):
     """run_suite() should correctly count fails when some responses don't match."""
     await _seed_suite_and_model(db_session, "svc-s2", "svc-m2")
@@ -92,7 +90,6 @@ async def test_run_suite_partial_failure(db_session):
     assert run.fail_count == 2
 
 
-@pytest.mark.anyio
 async def test_run_suite_llm_exception(db_session):
     """If LiteLLM raises for a case, that case should be marked as failed."""
     await _seed_suite_and_model(db_session, "svc-s3", "svc-m3")
@@ -111,7 +108,6 @@ async def test_run_suite_llm_exception(db_session):
     assert run.fail_count == 1
 
 
-@pytest.mark.anyio
 async def test_run_suite_not_found_suite(db_session):
     """run_suite() with a non-existent suite ID should raise ValueError."""
     svc = TestSuiteService(db_session)
@@ -119,7 +115,6 @@ async def test_run_suite_not_found_suite(db_session):
         await svc.run_suite("nonexistent-suite", "any-model")
 
 
-@pytest.mark.anyio
 async def test_run_suite_not_found_model(db_session):
     """run_suite() with a non-existent model ID should raise ValueError."""
     suite = TestSuite(id="svc-s4", name="Suite S4", category="coding")
@@ -131,7 +126,6 @@ async def test_run_suite_not_found_model(db_session):
         await svc.run_suite("svc-s4", "nonexistent-model")
 
 
-@pytest.mark.anyio
 async def test_list_runs_empty(db_session):
     """list_runs() for a suite with no runs should return []."""
     suite = TestSuite(id="svc-s5", name="Suite S5")
@@ -143,7 +137,6 @@ async def test_list_runs_empty(db_session):
     assert runs == []
 
 
-@pytest.mark.anyio
 async def test_list_runs_after_run(db_session):
     """list_runs() should return the run created by run_suite()."""
     await _seed_suite_and_model(db_session, "svc-s6", "svc-m6")

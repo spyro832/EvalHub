@@ -5,20 +5,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-@pytest.mark.anyio
 async def test_list_evaluations(client):
     response = await client.get("/api/v1/evaluations")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
-@pytest.mark.anyio
 async def test_get_evaluation_not_found(client):
     response = await client.get("/api/v1/evaluations/nonexistent-id")
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_create_evaluation_pending(client):
     """POST /evaluations should dispatch a Celery task and return status=pending."""
     payload = {
@@ -43,7 +40,6 @@ async def test_create_evaluation_pending(client):
     mock_task.delay.assert_called_once_with(data["id"])
 
 
-@pytest.mark.anyio
 async def test_get_evaluation_after_create(client):
     """GET /{id} should return the evaluation created above."""
     mock_task = MagicMock()
@@ -63,7 +59,6 @@ async def test_get_evaluation_after_create(client):
     assert get_resp.json()["name"] == "Get Test"
 
 
-@pytest.mark.anyio
 async def test_list_evaluations_after_create(client):
     """GET /evaluations should include evaluations; list grows after a POST."""
     resp_before = await client.get("/api/v1/evaluations")
@@ -81,7 +76,6 @@ async def test_list_evaluations_after_create(client):
     assert len(resp_after.json()) == count_before + 1
 
 
-@pytest.mark.anyio
 async def test_list_evaluations_pagination(client):
     """limit and skip query params should work."""
     response = await client.get("/api/v1/evaluations?limit=1&skip=0")

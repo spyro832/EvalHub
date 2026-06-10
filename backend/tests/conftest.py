@@ -9,11 +9,6 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
 
 @pytest.fixture(scope="session")
-def anyio_backend():
-    return "asyncio"
-
-
-@pytest.fixture(scope="session")
 async def engine():
     test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with test_engine.begin() as conn:

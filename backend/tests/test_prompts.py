@@ -1,14 +1,12 @@
 import pytest
 
 
-@pytest.mark.anyio
 async def test_list_prompts(client):
     response = await client.get("/api/v1/prompts")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
-@pytest.mark.anyio
 async def test_create_and_get_prompt(client):
     payload = {"name": "Test Prompt", "content": "Say hello to {name}", "tags": "test,hello"}
     response = await client.post("/api/v1/prompts", json=payload)
@@ -24,13 +22,11 @@ async def test_create_and_get_prompt(client):
     assert get_response.json()["id"] == prompt_id
 
 
-@pytest.mark.anyio
 async def test_get_prompt_not_found(client):
     response = await client.get("/api/v1/prompts/nonexistent-id")
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_delete_prompt(client):
     create = await client.post(
         "/api/v1/prompts", json={"name": "To Delete", "content": "delete me"}
@@ -44,14 +40,12 @@ async def test_delete_prompt(client):
     assert get.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_delete_prompt_not_found(client):
     """DELETE on a nonexistent prompt → 404."""
     response = await client.delete("/api/v1/prompts/nonexistent-prompt-id")
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_update_prompt(client):
     """PUT /{id} should update name/content and return the updated prompt."""
     create = await client.post(
@@ -70,7 +64,6 @@ async def test_update_prompt(client):
     assert data["id"] == prompt_id
 
 
-@pytest.mark.anyio
 async def test_update_prompt_not_found(client):
     """PUT on a nonexistent prompt → 404."""
     response = await client.put(

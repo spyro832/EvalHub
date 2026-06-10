@@ -27,7 +27,6 @@ async def _first_sse_event(response_text: str) -> dict:
 # ── Evaluation stream ─────────────────────────────────────────────────────────
 
 
-@pytest.mark.anyio
 async def test_stream_evaluation_not_found(client):
     """Stream for a non-existent evaluation_id → error SSE event."""
     response = await client.get("/api/v1/evaluations/nonexistent-eval/stream")
@@ -36,7 +35,6 @@ async def test_stream_evaluation_not_found(client):
     assert "error" in event
 
 
-@pytest.mark.anyio
 async def test_stream_evaluation_completed(client, db_session):
     """
     Stream for a COMPLETED evaluation → single SSE event with status=completed,
@@ -80,7 +78,6 @@ async def test_stream_evaluation_completed(client, db_session):
 # ── Test-suite run stream ─────────────────────────────────────────────────────
 
 
-@pytest.mark.anyio
 async def test_stream_run_not_found(client):
     """Stream for a non-existent run_id → error SSE event."""
     # Suite ID doesn't matter for the stream endpoint validation
@@ -90,7 +87,6 @@ async def test_stream_run_not_found(client):
     assert "error" in event
 
 
-@pytest.mark.anyio
 async def test_stream_run_completed(client, db_session):
     """
     Stream for a COMPLETED run → single SSE event with status=completed,

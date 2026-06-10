@@ -5,7 +5,6 @@ import pytest
 from app.models.evaluation import EvalResult, Evaluation, EvaluationStatus
 
 
-@pytest.mark.anyio
 async def test_cost_summary_empty(client):
     """Cost summary with no data should return zeros."""
     response = await client.get("/api/v1/cost/summary")
@@ -17,7 +16,6 @@ async def test_cost_summary_empty(client):
     assert data["total_output_tokens"] == 0
 
 
-@pytest.mark.anyio
 async def test_cost_summary_with_eval_result(client, db_session):
     """Cost summary should aggregate cost/token data from EvalResult rows."""
     # Insert a real Evaluation + EvalResult with cost data directly

@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-@pytest.mark.anyio
 async def test_list_test_suites(client):
     """GET /test-suites returns a valid list (may be non-empty due to test ordering)."""
     response = await client.get("/api/v1/test-suites")
@@ -11,7 +10,6 @@ async def test_list_test_suites(client):
     assert isinstance(response.json(), list)
 
 
-@pytest.mark.anyio
 async def test_create_test_suite_no_cases(client):
     payload = {"name": "My Suite", "description": "A test suite", "category": "coding"}
     response = await client.post("/api/v1/test-suites", json=payload)
@@ -22,7 +20,6 @@ async def test_create_test_suite_no_cases(client):
     assert data["cases"] == []
 
 
-@pytest.mark.anyio
 async def test_create_test_suite_with_cases(client):
     payload = {
         "name": "Python Suite",
@@ -37,13 +34,11 @@ async def test_create_test_suite_with_cases(client):
     assert len(data["cases"]) == 2
 
 
-@pytest.mark.anyio
 async def test_get_test_suite_not_found(client):
     response = await client.get("/api/v1/test-suites/nonexistent-id")
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_delete_test_suite(client):
     create = await client.post("/api/v1/test-suites", json={"name": "To Delete"})
     suite_id = create.json()["id"]
@@ -55,7 +50,6 @@ async def test_delete_test_suite(client):
     assert get.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_get_test_suite(client):
     """GET /{suite_id} for an existing suite should return 200."""
     create = await client.post(
@@ -73,7 +67,6 @@ async def test_get_test_suite(client):
 # ── Run endpoint ──────────────────────────────────────────────────────────────
 
 
-@pytest.mark.anyio
 async def test_run_test_suite_suite_not_found(client):
     """POST /{id}/run with a non-existent suite → 404."""
     model_resp = await client.post(
@@ -89,7 +82,6 @@ async def test_run_test_suite_suite_not_found(client):
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_run_test_suite_success(client):
     """POST /{id}/run should create a TestRun (PENDING) and dispatch Celery task."""
     # Create suite
@@ -130,7 +122,6 @@ async def test_run_test_suite_success(client):
 # ── List runs endpoint ────────────────────────────────────────────────────────
 
 
-@pytest.mark.anyio
 async def test_list_runs_empty(client):
     """GET /{suite_id}/runs for a suite with no runs → empty list."""
     create = await client.post("/api/v1/test-suites", json={"name": "No Runs Suite"})
@@ -141,14 +132,12 @@ async def test_list_runs_empty(client):
     assert response.json() == []
 
 
-@pytest.mark.anyio
 async def test_delete_test_suite_not_found(client):
     """DELETE on a nonexistent suite → 404."""
     response = await client.delete("/api/v1/test-suites/nonexistent-suite-id")
     assert response.status_code == 404
 
 
-@pytest.mark.anyio
 async def test_list_runs_after_trigger(client):
     """GET /{suite_id}/runs should include runs created by POST /{suite_id}/run."""
     suite_resp = await client.post(
